@@ -4,8 +4,9 @@ import {
   CheckSquare,
   Settings,
   ChevronDown,
-  Coffee,
   User2,
+  Armchair,
+  Scissors,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -81,6 +82,13 @@ export default function Sidebar({
       submenu: null,
     },
     {
+      id: "seat",
+      label: "Seat",
+      icon: Armchair,
+      path: "/seat",
+      submenu: null,
+    },
+    {
       id: "payments",
       label: "Payments",
       icon: CreditCard,
@@ -132,7 +140,7 @@ export default function Sidebar({
             <div className="flex items-center gap-3">
 
               <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-[#6D28D9] text-white flex items-center justify-center shadow-lg shadow-purple-950/40">
-                <Coffee size={17} />
+                <Scissors size={17} />
               </div>
 
               {!collapsed && (
