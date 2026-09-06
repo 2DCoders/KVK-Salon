@@ -86,7 +86,7 @@ export default function Navbar({
 
   return (
     <nav
-      className={`fixed top-0 right-0 z-40 h-16 border-b border-[#E8D9CC]/80 bg-white/95 backdrop-blur-md shadow-[0_1px_0_rgba(62,35,20,0.04)] transition-all duration-300 ${
+      className={`fixed top-0 right-0 z-40 h-16 border-b border-purple-100 bg-white/95 backdrop-blur-md shadow-[0_1px_0_rgba(124,58,237,0.08)] transition-all duration-300 ${
         sidebarOpen ? 'lg:left-72' : 'lg:left-20'
       } left-0`}
     >
@@ -97,7 +97,7 @@ export default function Navbar({
           {/* Desktop Sidebar Toggle */}
           <button
             onClick={onSidebarToggle}
-            className="hidden lg:flex cursor-pointer items-center justify-center w-10 h-10 rounded-full text-[#5C4A3E] hover:bg-[#F6EDE6] hover:text-[#6E3619] transition-colors"
+            className="hidden lg:flex cursor-pointer items-center justify-center w-10 h-10 rounded-full text-slate-600 hover:bg-purple-50 hover:text-purple-700 transition-colors"
             aria-label="Toggle sidebar"
           >
             <Menu size={20} />
@@ -106,7 +106,7 @@ export default function Navbar({
           {/* Mobile Menu Toggle */}
           <button
             onClick={onMobileDrawerToggle}
-            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full text-[#5C4A3E] hover:bg-[#F6EDE6] hover:text-[#6E3619] transition-colors"
+            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full text-slate-600 hover:bg-purple-50 hover:text-purple-700 transition-colors"
             aria-label="Toggle mobile menu"
           >
             {mobileDrawerOpen ? (
@@ -124,7 +124,7 @@ export default function Navbar({
             onClick={() => {
               navigate('/settings');
             }}
-            className="hidden cursor-pointer sm:flex items-center justify-center w-10 h-10 rounded-full text-[#8A7465] hover:bg-[#F6EDE6] hover:text-[#6E3619] transition-colors"
+            className="hidden cursor-pointer sm:flex items-center justify-center w-10 h-10 rounded-full text-slate-500 hover:bg-purple-50 hover:text-purple-700 transition-colors"
             aria-label="Settings"
           >
             <Settings size={18} />
@@ -133,7 +133,7 @@ export default function Navbar({
           {/* Fullscreen */}
           <button
             onClick={toggleFullscreen}
-            className="hidden cursor-pointer sm:flex items-center justify-center w-10 h-10 rounded-full text-[#8A7465] hover:bg-[#F6EDE6] hover:text-[#6E3619] transition-colors"
+            className="hidden cursor-pointer sm:flex items-center justify-center w-10 h-10 rounded-full text-slate-500 hover:bg-purple-50 hover:text-purple-700 transition-colors"
             aria-label={
               isFullscreen
                 ? 'Exit full screen'
@@ -158,7 +158,7 @@ export default function Navbar({
                   (current) => !current
                 )
               }
-              className="w-10 h-10 cursor-pointer rounded-full bg-[#F0DED0] text-[#7A3E18] flex items-center justify-center text-xs font-semibold shadow-sm ring-0 transition hover:bg-[#E7CCB8] hover:text-[#5A2D16]"
+              className="w-10 h-10 cursor-pointer rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-semibold shadow-sm ring-0 transition hover:bg-purple-200 hover:text-purple-800"
               aria-label="Open account menu"
               aria-expanded={accountMenuOpen}
               aria-haspopup="menu"
@@ -168,16 +168,16 @@ export default function Navbar({
             </button>
 
             {accountMenuOpen && (
-              <div className="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-xl border border-[#E5D5C7] bg-white shadow-xl shadow-[#3E2314]/10">
+              <div className="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-xl border border-purple-100 bg-white shadow-xl shadow-purple-950/10">
 
                 {/* Account Information */}
-                <div className="border-b border-[#F0E5DC] px-3 py-3">
-                  <div className="text-sm font-medium text-[#2A160D]">
+                <div className="border-b border-purple-100 px-3 py-3">
+                  <div className="text-sm font-medium text-slate-900">
                     {cashier?.firstName}{' '}
                     {cashier?.lastName}
                   </div>
 
-                  <div className="mt-0.5 text-xs text-[#8A7465]">
+                  <div className="mt-0.5 text-xs text-slate-500">
                     {cashier?.email}
                   </div>
                 </div>

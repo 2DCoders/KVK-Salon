@@ -5,10 +5,8 @@ import {
   Settings,
   ChevronDown,
   Coffee,
-  Boxes,
+  User2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getDayEndData } from "@/services/day-end-api";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -39,47 +37,47 @@ export default function Sidebar({
   const navigate = useNavigate();
   const collapsed = !isOpen && !isMobile;
 
-  const [isDidDayEnd, setIsDidDayEnd] = useState(false);
+  // const [isDidDayEnd, setIsDidDayEnd] = useState(false);
 
   const cashier = localStorage.getItem("cashier")
     ? JSON.parse(localStorage.getItem("cashier") as string)
     : null;
 
-  const handleGetDayEndData = async () => {
-    const today = new Date().toISOString().split("T")[0];
+  // const handleGetDayEndData = async () => {
+  //   const today = new Date().toISOString().split("T")[0];
 
-    try {
-      const res = await getDayEndData(today);
+  //   try {
+  //     const res = await getDayEndData(today);
 
-      if (res && res.length > 0) {
-        setIsDidDayEnd(true);
-        localStorage.setItem("dayEndData", JSON.stringify(res[0]));
-      } else {
-        setIsDidDayEnd(false);
-        localStorage.removeItem("dayEndData");
-      }
-    } catch (error) {
-      setIsDidDayEnd(false);
-      localStorage.removeItem("dayEndData");
-    }
-  };
+  //     if (res && res.length > 0) {
+  //       setIsDidDayEnd(true);
+  //       localStorage.setItem("dayEndData", JSON.stringify(res[0]));
+  //     } else {
+  //       setIsDidDayEnd(false);
+  //       localStorage.removeItem("dayEndData");
+  //     }
+  //   } catch (error) {
+  //     setIsDidDayEnd(false);
+  //     localStorage.removeItem("dayEndData");
+  //   }
+  // };
 
-  useEffect(() => {
-    handleGetDayEndData();
-  }, []);
+  // useEffect(() => {
+  //   handleGetDayEndData();
+  // }, []);
 
-  const canAccessMenu = (itemId: string) => {
-    if (isDidDayEnd) return true;
+  // const canAccessMenu = (itemId: string) => {
+  //   if (isDidDayEnd) return true;
 
-    return itemId === "dayend";
-  };
+  //   return itemId === "dayend";
+  // };
 
   const navItems: NavItem[] = [
     {
-      id: "menu",
-      label: "Menu",
-      icon: Coffee,
-      path: "/menu",
+      id: "staff",
+      label: "Staff",
+      icon: User2,
+      path: "/staff",
       submenu: null,
     },
     {
@@ -123,28 +121,28 @@ export default function Sidebar({
   return (
     <>
       <aside
-        className={`${isMobile ? "fixed inset-y-0 left-0 z-40" : "relative"} h-full w-full bg-white border-r border-[#E8D9CC] shadow-[0_0_0_1px_rgba(62,35,20,0.03)] transition-all duration-300 ease-in-out ${
+          className={`${isMobile ? "fixed inset-y-0 left-0 z-40" : "relative"} h-full w-full bg-white border-r border-purple-100 shadow-[0_0_0_1px_rgba(124,58,237,0.08)] transition-all duration-300 ease-in-out ${
           isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : ""
-        } overflow-y-auto scrollbar-thin scrollbar-thumb-[#D8C2B0] scrollbar-track-transparent`}
+          } overflow-y-auto scrollbar-thin scrollbar-thumb-purple-200 scrollbar-track-transparent`}
       >
         <div className="flex flex-col h-full">
 
           {/* Brand Header */}
-          <div className="px-4 pt-4 pb-3 border-b border-[#F0E5DC]">
+          <div className="px-4 pt-4 pb-3 border-b border-purple-100">
             <div className="flex items-center gap-3">
 
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#8B451F] to-[#5A2D16] text-white flex items-center justify-center shadow-sm">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-[#6D28D9] text-white flex items-center justify-center shadow-lg shadow-purple-950/40">
                 <Coffee size={17} />
               </div>
 
               {!collapsed && (
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[#2A160D] truncate">
-                    KVK Cafe System
+                  <p className="text-sm font-semibold text-slate-900 truncate">
+                    KVK Salon
                   </p>
 
-                  <p className="text-xs text-[#8A7465]">
-                    Cashier Panel
+                  <p className="text-xs text-purple-600">
+                    Admin Management
                   </p>
                 </div>
               )}
@@ -165,29 +163,30 @@ export default function Sidebar({
 
               const iconWrapper = `${
                 active
-                  ? "bg-[#F6E9DD] text-[#6E3619]"
-                  : "text-[#9A8678]"
+                  ? "bg-purple-100 text-purple-700"
+                  : "text-slate-500"
               } w-8 h-8 flex items-center justify-center rounded-lg transition`;
 
               return (
                 <div key={item.id}>
                   <button
                     onClick={() => {
-                      if (!canAccessMenu(item.id)) return;
+                      // if (!canAccessMenu(item.id)) return;
                       handleNavigation(item.path);
                     }}
-                    disabled={!canAccessMenu(item.id)}
+                    // disabled={!canAccessMenu(item.id)}
                     className={`${btnBase}
                       ${
                         active && !collapsed
-                          ? "bg-[#F6E9DD] text-[#6E3619] shadow-sm"
-                          : "text-[#4A372D] hover:bg-[#FAF5F1]"
+                          ? "bg-purple-500/15 text-purple-200 shadow-sm"
+                          : "text-slate-700 hover:bg-purple-50"
                       }
                       cursor-pointer
                       ${
-                        !canAccessMenu(item.id)
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
+                        // !canAccessMenu(item.id)
+                          // ? "opacity-50 cursor-not-allowed"
+                          // : ""
+                          ""
                       }
                     `}
                   >
@@ -204,8 +203,8 @@ export default function Sidebar({
                         <span
                           className={`text-sm ${
                             active
-                              ? "text-[#6E3619] font-semibold"
-                              : "text-[#4A372D]"
+                              ? "text-purple-700 font-semibold"
+                              : "text-slate-700"
                           }`}
                         >
                           {item.label}
@@ -216,7 +215,7 @@ export default function Sidebar({
                     {!collapsed && item.submenu && (
                       <ChevronDown
                         size={16}
-                        className="text-[#A69588]"
+                        className="text-slate-400"
                       />
                     )}
                   </button>
@@ -232,8 +231,8 @@ export default function Sidebar({
                           }
                           className={`w-full text-left px-4 py-2 text-sm rounded-lg transition-all duration-200 ${
                             isActive(subitem.path)
-                              ? "bg-[#F6E9DD] text-[#8B451F] font-medium"
-                              : "text-[#66554A] hover:bg-[#FAF5F1]"
+                              ? "bg-purple-100 text-purple-700 font-medium"
+                              : "text-slate-500 hover:bg-purple-50"
                           }`}
                         >
                           {subitem.label}
@@ -247,7 +246,7 @@ export default function Sidebar({
           </nav>
 
           {/* Footer */}
-          <div className="mt-auto px-4 pb-4 pt-3 border-t border-[#F0E5DC] space-y-3">
+          <div className="mt-auto px-4 pb-4 pt-3 border-t border-purple-100 space-y-3">
 
             <div className="flex items-center gap-2 text-xs text-emerald-600">
               {!collapsed && (
@@ -258,19 +257,19 @@ export default function Sidebar({
             </div>
 
             {!collapsed && (
-              <div className="flex items-center gap-3 rounded-2xl border border-[#E8D9CC] bg-[#FAF6F2] px-3 py-3 shadow-sm">
+              <div className="flex items-center gap-3 rounded-2xl border border-purple-100 bg-purple-50/60 px-3 py-3 shadow-sm">
 
-                <div className="w-8 h-8 rounded-full bg-[#F0DED0] text-[#7A3E18] flex items-center justify-center text-xs font-semibold">
+                <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-900 flex items-center justify-center text-xs font-semibold">
                   {cashier?.firstName?.charAt(0)}
                   {cashier?.lastName?.charAt(0)}
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[#2A160D] truncate">
+                  <p className="text-sm font-semibold text-slate-900 truncate">
                     {cashier?.firstName} {cashier?.lastName}
                   </p>
 
-                  <p className="text-xs text-[#8A7465]">
+                  <p className="text-xs text-slate-500">
                     {cashier?.email}
                   </p>
                 </div>
@@ -278,7 +277,7 @@ export default function Sidebar({
             )}
 
             {collapsed && (
-              <div className="w-8 h-8 rounded-full bg-[#F0DED0] text-[#7A3E18] flex items-center justify-center text-xs font-semibold">
+              <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-200 flex items-center justify-center text-xs font-semibold">
                 {cashier?.firstName?.charAt(0)}
                 {cashier?.lastName?.charAt(0)}
               </div>
