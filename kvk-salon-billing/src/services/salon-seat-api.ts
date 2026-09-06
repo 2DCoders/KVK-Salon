@@ -2,7 +2,7 @@ import axios from "axios";
 import { getEnv } from "@/env";
 
 const { API_URL } = getEnv();
-const SALON_API_URL = `${API_URL}saloon/sallons/`;
+const SALON_API_URL = `${API_URL}saloon/saloons/`;
 
 const getToken = () => {
     const cashier = localStorage.getItem("cashier")
