@@ -7,6 +7,7 @@ import {
   User2,
   Armchair,
   Scissors,
+  Sparkles,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -86,6 +87,13 @@ export default function Sidebar({
       label: "Seat",
       icon: Armchair,
       path: "/seat",
+      submenu: null,
+    },
+    {
+      id: "services",
+      label: "Services",
+      icon: Sparkles,
+      path: "/services",
       submenu: null,
     },
     {
