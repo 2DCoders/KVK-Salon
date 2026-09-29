@@ -69,7 +69,7 @@ export default function Login() {
       )
 
       localStorage.setItem('cashier', JSON.stringify(cashier))
-      navigate('/menu')
+      navigate('/seat')
     } catch (error) {
       console.error('Login failed:', error)
 
@@ -300,8 +300,8 @@ export default function Login() {
                     User ID
                   </Label>
 
-                  <div className="group relative rounded-xl border border-purple-500/15 bg-[#0F0A17] hover:border-purple-400/40 focus-within:border-purple-500 focus-within:ring-purple-500/20">
-                    <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 group-focus-within:text-purple-400" />
+                  <div className="group relative rounded-xl border border-purple-500/15 bg-stone-50 hover:border-purple-400/40 focus-within:border-purple-500 focus-within:ring-purple-500/20">
+                    <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 group-focus-within:text-purple-500" />
 
                     <Input
                       id="userId"
@@ -311,7 +311,7 @@ export default function Login() {
                       value={formData.userId}
                       onChange={handleChange}
                       autoComplete="username"
-                      className="h-11 rounded-xl border-purple-500/15 bg-[#0F0A17] pl-10 text-white placeholder:text-slate-600 hover:border-purple-400/40 focus-visible:border-purple-500 focus-visible:ring-purple-500/20"
+                      className="h-11 rounded-xl border-purple-500/15 bg-stone-50 pl-10 text-stone-900 placeholder:text-stone-400 hover:border-purple-400/40 focus-visible:border-purple-500 focus-visible:ring-purple-500/20"
                       required
                     />
                   </div>
@@ -326,8 +326,8 @@ export default function Login() {
                     Password
                   </Label>
 
-                  <div className="group relative rounded-xl border border-purple-500/15 bg-[#0F0A17] hover:border-purple-400/40 focus-within:border-purple-500 focus-within:ring-purple-500/20">
-                    <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 group-focus-within:text-purple-400" />
+                  <div className="group relative rounded-xl border border-purple-500/15 bg-stone-50 hover:border-purple-400/40 focus-within:border-purple-500 focus-within:ring-purple-500/20">
+                    <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 group-focus-within:text-purple-500" />
 
                     <Input
                       id="password"
@@ -337,7 +337,7 @@ export default function Login() {
                       value={formData.password}
                       onChange={handleChange}
                       autoComplete="current-password"
-                      className="h-11 rounded-xl border-purple-500/15 bg-[#0F0A17] pl-10 pr-11 text-white placeholder:text-slate-600 hover:border-purple-400/40 focus-visible:border-purple-500 focus-visible:ring-purple-500/20"
+                      className="h-11 rounded-xl border-purple-500/15 bg-stone-50 pl-10 pr-11 text-stone-900 placeholder:text-stone-400 hover:border-purple-400/40 focus-visible:border-purple-500 focus-visible:ring-purple-500/20"
                       required
                     />
 
@@ -346,7 +346,7 @@ export default function Login() {
                       onClick={() =>
                         setShowPassword((previous) => !previous)
                       }
-                      className="absolute right-3.5 top-1/2 cursor-pointer -translate-y-1/2 rounded-md p-1 text-slate-500 transition hover:text-purple-300"
+                      className="absolute right-3.5 top-1/2 cursor-pointer -translate-y-1/2 rounded-md p-1 text-stone-400 transition hover:text-purple-500"
                       aria-label={
                         showPassword
                           ? 'Hide password'
