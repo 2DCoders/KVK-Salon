@@ -24,7 +24,6 @@ import {
 import {
   createServiceItem,
   deleteServiceItem,
-  getSaloonBranches,
   getServiceItems,
   updateServiceItem,
 } from "@/services/salon-services-api";
@@ -49,16 +48,14 @@ type ServiceForm = {
   description: string;
   price: string;
   durationMinutes: string;
-  bufferMinutes: string;
   isActive: boolean;
 };
 
 type FormErrors = Partial<
-  Record<
-    "name" | "description" | "price" | "durationMinutes" | "bufferMinutes" | "image",
-    string
-  >
+  Record<"name" | "description" | "price" | "durationMinutes" | "image", string>
 >;
+
+const HARDCODED_BUFFER_MINUTES = 0;
 
 type AlertState = {
   visible: boolean;
@@ -123,7 +120,6 @@ const initialForm: ServiceForm = {
   description: "",
   price: "",
   durationMinutes: "",
-  bufferMinutes: "0",
   isActive: true,
 };
 
@@ -132,9 +128,6 @@ const initialForm: ServiceForm = {
    ========================================================= */
 
 export default function SalonServicesPage() {
-  const [saloonId, setSaloonId] = useState<string>("");
-  const [isResolvingBranch, setIsResolvingBranch] = useState(true);
-
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -171,43 +164,14 @@ export default function SalonServicesPage() {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   /* =========================================================
-     Resolve the active salon branch
-     ========================================================= */
-
-  const resolveSaloonBranch = async () => {
-    try {
-      setIsResolvingBranch(true);
-
-      const response = await getSaloonBranches();
-      const branches: any[] = Array.isArray(response) ? response : [];
-
-      const activeBranch =
-        branches.find((branch) => branch.isActive) ?? branches[0] ?? null;
-
-      setSaloonId(activeBranch ? String(activeBranch.id) : "");
-    } catch (error) {
-      console.error("Unable to resolve salon branch:", error);
-      setSaloonId("");
-    } finally {
-      setIsResolvingBranch(false);
-    }
-  };
-
-  useEffect(() => {
-    void resolveSaloonBranch();
-  }, []);
-
-  /* =========================================================
      Services Data Loading
      ========================================================= */
 
   const loadServices = async () => {
-    if (!saloonId) return;
-
     try {
       setIsLoading(true);
 
-      const response = await getServiceItems(saloonId);
+      const response = await getServiceItems();
       setServices(Array.isArray(response) ? response.map(normalizeService) : []);
     } catch (error) {
       console.error("Unable to load salon services:", error);
@@ -225,13 +189,8 @@ export default function SalonServicesPage() {
   };
 
   useEffect(() => {
-    if (saloonId) {
-      void loadServices();
-    } else if (!isResolvingBranch) {
-      setIsLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saloonId, isResolvingBranch]);
+    void loadServices();
+  }, []);
 
   useEffect(() => {
     if (!pageAlert.visible) return;
@@ -351,7 +310,6 @@ export default function SalonServicesPage() {
       description: service.description,
       price: String(service.price),
       durationMinutes: String(service.durationMinutes),
-      bufferMinutes: String(service.bufferMinutes),
       isActive: service.isActive,
     });
 
@@ -383,7 +341,7 @@ export default function SalonServicesPage() {
   };
 
   const handleFormChange = (
-    field: "name" | "description" | "price" | "durationMinutes" | "bufferMinutes",
+    field: "name" | "description" | "price" | "durationMinutes",
     value: string,
   ) => {
     setForm((previous) => ({ ...previous, [field]: value }));
@@ -422,14 +380,6 @@ export default function SalonServicesPage() {
       errors.durationMinutes = "Duration is required.";
     } else if (Number.isNaN(duration) || duration <= 0) {
       errors.durationMinutes = "Enter a valid duration greater than zero.";
-    }
-
-    const buffer = Number(form.bufferMinutes);
-
-    if (!form.bufferMinutes.trim()) {
-      errors.bufferMinutes = "Buffer time is required.";
-    } else if (Number.isNaN(buffer) || buffer < 0) {
-      errors.bufferMinutes = "Enter a valid buffer time.";
     }
 
     if (!selectedImage && !imagePreview) {
@@ -511,16 +461,6 @@ export default function SalonServicesPage() {
   const handleSubmitService = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!saloonId) {
-      setPageAlert({
-        visible: true,
-        variant: "error",
-        title: "No salon branch found",
-        description: "Please create a salon branch under Seat Maintenance first.",
-      });
-      return;
-    }
-
     if (!validateForm()) return;
 
     try {
@@ -531,7 +471,7 @@ export default function SalonServicesPage() {
       payload.append("Description", form.description.trim());
       payload.append("Price", String(Number(form.price)));
       payload.append("DurationMinutes", String(Number(form.durationMinutes)));
-      payload.append("BufferMinutes", String(Number(form.bufferMinutes || 0)));
+      payload.append("BufferMinutes", String(HARDCODED_BUFFER_MINUTES));
       payload.append("IsActive", String(form.isActive));
 
       if (selectedImage) {
@@ -539,7 +479,7 @@ export default function SalonServicesPage() {
       }
 
       if (formMode === "add") {
-        await createServiceItem(saloonId, payload);
+        await createServiceItem(payload);
 
         setPageAlert({
           visible: true,
@@ -549,7 +489,7 @@ export default function SalonServicesPage() {
         });
       } else if (selectedService) {
         payload.append("Id", selectedService.id);
-        await updateServiceItem(saloonId, selectedService.id, payload);
+        await updateServiceItem(selectedService.id, payload);
 
         setPageAlert({
           visible: true,
@@ -578,12 +518,12 @@ export default function SalonServicesPage() {
   };
 
   const handleDeleteService = async () => {
-    if (!selectedService || !saloonId) return;
+    if (!selectedService) return;
 
     try {
       setIsSubmitting(true);
 
-      await deleteServiceItem(saloonId, selectedService.id);
+      await deleteServiceItem(selectedService.id);
 
       setPageAlert({
         visible: true,
@@ -609,8 +549,6 @@ export default function SalonServicesPage() {
     }
   };
 
-  const showBranchWarning = !isResolvingBranch && !saloonId;
-
   return (
     <main className="min-h-screen bg-slate-50/60">
       {pageAlert.visible &&
@@ -626,18 +564,14 @@ export default function SalonServicesPage() {
           document.body,
         )}
 
-      {(isLoading || isSubmitting || isResolvingBranch) &&
+      {(isLoading || isSubmitting) &&
         createPortal(
           <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
               <div className="h-14 w-14 animate-spin rounded-full border-4 border-white/30 border-t-white" />
 
               <p className="text-sm font-medium text-white">
-                {isSubmitting
-                  ? "Processing..."
-                  : isResolvingBranch
-                    ? "Loading salon branch..."
-                    : "Loading services..."}
+                {isSubmitting ? "Processing..." : "Loading services..."}
               </p>
             </div>
           </div>,
@@ -667,7 +601,7 @@ export default function SalonServicesPage() {
             <button
               type="button"
               onClick={() => void loadServices()}
-              disabled={isLoading || !saloonId}
+              disabled={isLoading}
               className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
@@ -677,29 +611,13 @@ export default function SalonServicesPage() {
             <button
               type="button"
               onClick={handleOpenAddModal}
-              disabled={!saloonId}
-              className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] px-4 text-sm font-semibold text-white shadow-lg shadow-purple-300/30 transition hover:from-[#8B5CF6] hover:to-[#6D28D9] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] px-4 text-sm font-semibold text-white shadow-lg shadow-purple-300/30 transition hover:from-[#8B5CF6] hover:to-[#6D28D9]"
             >
               <Plus size={17} />
               Add Service
             </button>
           </div>
         </div>
-
-        {showBranchWarning && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-            <div>
-              <p className="font-semibold text-amber-900">
-                No salon branch found
-              </p>
-              <p className="mt-1 text-sm text-amber-700">
-                Please create a salon branch under Seat Maintenance before
-                adding services.
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Summary */}
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -892,7 +810,6 @@ export default function SalonServicesPage() {
                       <EmptyState
                         hasSearch={Boolean(searchTerm.trim())}
                         onAdd={handleOpenAddModal}
-                        canAdd={Boolean(saloonId)}
                       />
                     </td>
                   </tr>
@@ -947,7 +864,7 @@ export default function SalonServicesPage() {
                             previous === service.id ? null : service.id,
                           )
                         }
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500"
+                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500"
                       >
                         <MoreVertical size={18} />
                       </button>
@@ -957,7 +874,7 @@ export default function SalonServicesPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenViewModal(service)}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-700"
+                            className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-700"
                           >
                             <Eye size={16} />
                             View
@@ -966,7 +883,7 @@ export default function SalonServicesPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenEditModal(service)}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-700"
+                            className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-700"
                           >
                             <Edit3 size={16} />
                             Edit
@@ -975,7 +892,7 @@ export default function SalonServicesPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenDeleteModal(service)}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                            className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                           >
                             <Trash2 size={16} />
                             Delete
@@ -994,7 +911,6 @@ export default function SalonServicesPage() {
               <EmptyState
                 hasSearch={Boolean(searchTerm.trim())}
                 onAdd={handleOpenAddModal}
-                canAdd={Boolean(saloonId)}
               />
             )}
           </div>
@@ -1145,7 +1061,7 @@ type ServiceFormModalProps = {
   isDragging: boolean;
   isSubmitting: boolean;
   onChange: (
-    field: "name" | "description" | "price" | "durationMinutes" | "bufferMinutes",
+    field: "name" | "description" | "price" | "durationMinutes",
     value: string,
   ) => void;
   onToggleActive: () => void;
@@ -1252,21 +1168,10 @@ function ServiceFormModal({
                   />
                 </div>
 
-                <FormField
-                  label="Buffer Time (minutes)"
-                  value={form.bufferMinutes}
-                  placeholder="e.g. 5"
-                  type="number"
-                  required
-                  error={errors.bufferMinutes}
-                  hint="Cleanup or prep time between consecutive bookings."
-                  onChange={(value) => onChange("bufferMinutes", value)}
-                />
-
                 <button
                   type="button"
                   onClick={onToggleActive}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl border p-4 text-left transition ${
+                  className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border p-4 text-left transition ${
                     form.isActive
                       ? "border-purple-200 bg-purple-50/70"
                       : "border-slate-200 bg-slate-50"
@@ -1766,11 +1671,9 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
 function EmptyState({
   hasSearch,
   onAdd,
-  canAdd,
 }: {
   hasSearch: boolean;
   onAdd: () => void;
-  canAdd: boolean;
 }) {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
@@ -1786,11 +1689,11 @@ function EmptyState({
           : "No salon services have been created yet."}
       </p>
 
-      {!hasSearch && canAdd && (
+      {!hasSearch && (
         <button
           type="button"
           onClick={onAdd}
-          className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] px-4 text-sm font-semibold text-white shadow-sm transition hover:from-[#8B5CF6] hover:to-[#6D28D9]"
+          className="mt-5 inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] px-4 text-sm font-semibold text-white shadow-sm transition hover:from-[#8B5CF6] hover:to-[#6D28D9]"
         >
           <Plus size={16} />
           Add Service
