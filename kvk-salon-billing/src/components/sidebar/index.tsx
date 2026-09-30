@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  CreditCard,
+  CalendarCheck,
   CheckSquare,
   Settings,
   ChevronDown,
@@ -105,10 +105,10 @@ export default function Sidebar({
       submenu: null,
     },
     {
-      id: "payments",
-      label: "Payments",
-      icon: CreditCard,
-      path: "/payments",
+      id: "today",
+      label: "Today's Appointments",
+      icon: CalendarCheck,
+      path: "/today",
       submenu: null,
     },
     {

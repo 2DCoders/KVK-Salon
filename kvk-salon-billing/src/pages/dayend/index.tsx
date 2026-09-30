@@ -22,7 +22,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { getFinancialSummary } from "@/services/financial-api";
-import { getDayEndData, performDayEnd } from "@/services/day-end-api";
+import { getDayEndData, performDayEnd } from "@/services/dayend-api";
 
 /* =========================================================
    Types
@@ -196,12 +196,12 @@ export default function Dayend() {
     try {
       const startDate = date;
 
-    const nextDate = new Date(date);
-    nextDate.setDate(nextDate.getDate() + 1);
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
 
-    const endDate = nextDate.toISOString().split("T")[0];
+      const endDate = nextDate.toISOString().split("T")[0];
 
-    const response = await getFinancialSummary(startDate, endDate);
+      const response = await getFinancialSummary(startDate, endDate);
       const summary =
         response?.additionalData?.response ??
         response?.response ??
@@ -326,7 +326,7 @@ export default function Dayend() {
         format: "a4",
       });
 
-      const primaryColor: [number, number, number] = [30, 58, 138]; // Deep blue
+      const primaryColor: [number, number, number] = [91, 33, 182]; // Deep purple
       const workingDateFormatted = formatDateDisplay(dayEndData?.currentDate);
       const printTimestamp = new Date().toLocaleString("en-GB");
 
@@ -337,7 +337,7 @@ export default function Dayend() {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("KVK CAR WASH & AUTO CARE", 14, 11);
+      doc.text("KVK SALON", 14, 11);
 
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
@@ -358,7 +358,7 @@ export default function Dayend() {
         body: [
           [
             workingDateFormatted,
-            `${financialSummary.totalTransactions} orders`,
+            `${financialSummary.totalTransactions} appointments`,
             formatPrice(financialSummary.totalRevenue),
             isDiscrepancyZero
               ? "BALANCED"
@@ -419,7 +419,7 @@ export default function Dayend() {
           ],
         ],
         headStyles: {
-          fillColor: [30, 58, 138],
+          fillColor: [91, 33, 182],
           textColor: [255, 255, 255],
           fontStyle: "bold",
           fontSize: 8.5,
@@ -480,7 +480,7 @@ export default function Dayend() {
           ["Net Cash to Bank / Safe Deposit", formatPrice(netBankDeposit), "To be securely deposited into bank/safe"],
         ],
         headStyles: {
-          fillColor: [30, 58, 138],
+          fillColor: [91, 33, 182],
           textColor: [255, 255, 255],
           fontStyle: "bold",
           fontSize: 8.5,
@@ -517,7 +517,7 @@ export default function Dayend() {
       doc.text("Verified By (Manager / Owner)", 140, signY + 5);
 
       const fileNameDate = (dayEndData?.currentDate || defaultDate).split("T")[0];
-      doc.save(`KVK_DayEnd_Report_${fileNameDate}.pdf`);
+      doc.save(`KVK_Salon_DayEnd_Report_${fileNameDate}.pdf`);
 
       setPageAlert({
         visible: true,
@@ -580,7 +580,7 @@ export default function Dayend() {
         {/* Page Header */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-900 text-white shadow-sm shadow-blue-900/20">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-[#5B21B6] text-white shadow-sm shadow-purple-900/20">
               <CalendarCheck2 size={22} />
             </div>
             <div>
@@ -589,8 +589,8 @@ export default function Dayend() {
                   Day End Reconciliation
                 </h1>
                 {dayEndData?.currentDate && (
-                  <span className="hidden items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-900 sm:inline-flex">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
+                  <span className="hidden items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-xs font-semibold text-purple-900 sm:inline-flex">
+                    <span className="h-1.5 w-1.5 rounded-full bg-purple-600 animate-pulse" />
                     {formatDateDisplay(dayEndData.currentDate)}
                   </span>
                 )}
@@ -606,7 +606,7 @@ export default function Dayend() {
               type="button"
               onClick={() => void handleFetchDayEndData()}
               disabled={isLoading}
-              className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-900 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-60"
+              className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-purple-600 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-60"
             >
               <RefreshCcw
                 size={16}
@@ -619,7 +619,7 @@ export default function Dayend() {
               type="button"
               onClick={handleGeneratePdf}
               disabled={isLoading || isExportingPdf}
-              className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-900 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-60"
+              className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-purple-600 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-60"
             >
               <Download size={16} />
               Print Report
@@ -630,7 +630,7 @@ export default function Dayend() {
                 type="button"
                 onClick={() => setShowConfirmModal(true)}
                 disabled={!canCloseDay || isSubmitting}
-                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-purple-600 to-[#5B21B6] px-4 text-sm font-semibold text-white shadow-sm transition hover:from-purple-500 hover:to-purple-800 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300"
               >
                 <Lock size={16} />
                 Close Business Day
@@ -667,7 +667,7 @@ export default function Dayend() {
             value={formatShortPrice(financialSummary.totalRevenue)}
             subtitle="Combined daily income"
             icon={<TrendingUp size={20} />}
-            iconClassName="bg-blue-50 text-blue-900"
+            iconClassName="bg-purple-50 text-purple-700"
           />
           <SummaryCard
             title="Cash Revenue"
@@ -684,9 +684,9 @@ export default function Dayend() {
             iconClassName="bg-violet-50 text-violet-600"
           />
           <SummaryCard
-            title="Total Orders"
+            title="Total Appointments"
             value={financialSummary.totalTransactions.toLocaleString()}
-            subtitle="Completed transactions"
+            subtitle="Completed appointments"
             icon={<ReceiptText size={20} />}
             iconClassName="bg-emerald-50 text-emerald-600"
           />
@@ -698,7 +698,7 @@ export default function Dayend() {
           <section className="lg:col-span-7 flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 p-4 sm:px-6">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-900">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100 text-purple-700">
                   <Banknote size={19} />
                 </div>
                 <div>
@@ -780,7 +780,7 @@ export default function Dayend() {
                     onChange={(e) => setActualCashCount(e.target.value)}
                     placeholder="0.00"
                     disabled={isPageLocked}
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-14 pr-4 text-right text-lg font-bold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-14 pr-4 text-right text-lg font-bold text-slate-900 outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                   />
                 </div>
               </div>
@@ -876,7 +876,7 @@ export default function Dayend() {
           <section className="lg:col-span-5 flex flex-col gap-6">
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
               <div className="flex items-center gap-2.5 border-b border-slate-200 bg-slate-50/70 p-4 sm:px-6">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-900">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100 text-purple-700">
                   <Vault size={19} />
                 </div>
                 <div>
@@ -912,7 +912,7 @@ export default function Dayend() {
                       className={`h-11 w-full rounded-xl border pl-14 pr-4 text-right text-sm font-semibold outline-none transition focus:ring-4 ${
                         !isHoldAmountValid
                           ? "border-red-400 bg-white focus:border-red-500 focus:ring-red-100"
-                          : "border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100"
+                          : "border-slate-200 bg-white focus:border-purple-500 focus:ring-purple-100"
                       }`}
                     />
                   </div>
@@ -928,17 +928,17 @@ export default function Dayend() {
                 </div>
 
                 {/* Net Safe Deposit Calculation Card */}
-                <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
+                <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-blue-900">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-purple-900">
                         Net Cash to Safe / Bank
                       </p>
                       <p className="text-xs text-slate-500 mt-0.5">
                         Actual Count minus Tomorrow's Float
                       </p>
                     </div>
-                    <p className="text-lg font-bold text-blue-900">
+                    <p className="text-lg font-bold text-purple-900">
                       {formatPrice(netBankDeposit)}
                     </p>
                   </div>
@@ -955,7 +955,7 @@ export default function Dayend() {
                     onChange={(e) => setClosingNotes(e.target.value)}
                     placeholder="Add any additional shift or management notes..."
                     disabled={isPageLocked}
-                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100 disabled:bg-slate-100"
                   />
                 </div>
 
@@ -965,7 +965,7 @@ export default function Dayend() {
                     type="button"
                     onClick={() => setShowConfirmModal(true)}
                     disabled={!canCloseDay || isSubmitting}
-                    className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-900 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-purple-600 to-[#5B21B6] px-5 text-sm font-semibold text-white shadow-sm transition hover:from-purple-500 hover:to-purple-800 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300"
                   >
                     <Lock size={17} />
                     Close Business Day
@@ -975,7 +975,7 @@ export default function Dayend() {
                     type="button"
                     onClick={handleGeneratePdf}
                     disabled={isLoading || isExportingPdf}
-                    className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-900 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-60"
+                    className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-purple-600 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-60"
                   >
                     <Download size={17} />
                     Download Summary Report
@@ -1078,20 +1078,20 @@ function BreakdownCard({
     <div
       className={`rounded-2xl border p-4 transition ${
         highlight
-          ? "border-blue-200 bg-blue-50/70"
+          ? "border-purple-200 bg-purple-50/70"
           : "border-slate-200 bg-slate-50/60"
       }`}
     >
       <p
         className={`text-xs font-semibold ${
-          highlight ? "text-blue-900" : "text-slate-500"
+          highlight ? "text-purple-900" : "text-slate-500"
         }`}
       >
         {label}
       </p>
       <p
         className={`mt-1.5 text-lg font-bold truncate ${
-          highlight ? "text-blue-950" : "text-slate-900"
+          highlight ? "text-purple-950" : "text-slate-900"
         }`}
       >
         {value}
@@ -1112,7 +1112,7 @@ function CustomAlert({
     success: "border-emerald-200 bg-emerald-50 text-emerald-800",
     error: "border-red-200 bg-red-50 text-red-800",
     warning: "border-amber-200 bg-amber-50 text-amber-800",
-    info: "border-blue-200 bg-blue-50 text-blue-800",
+    info: "border-purple-200 bg-purple-50 text-purple-800",
   };
 
   return (
@@ -1187,7 +1187,7 @@ function CloseDayConfirmModal({
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-900 text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-[#5B21B6] text-white">
               <Lock size={20} />
             </div>
             <div>
@@ -1222,7 +1222,7 @@ function CloseDayConfirmModal({
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-500">Total Day Revenue:</span>
               <span className="font-bold text-slate-900">
-                {formatPrice(totalRevenue)} ({totalTransactions} orders)
+                {formatPrice(totalRevenue)} ({totalTransactions} appointments)
               </span>
             </div>
             <div className="h-px bg-slate-200" />
@@ -1264,8 +1264,8 @@ function CloseDayConfirmModal({
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="font-bold text-blue-900">Net Safe / Bank Deposit:</span>
-              <span className="text-base font-extrabold text-blue-900">
+              <span className="font-bold text-purple-900">Net Safe / Bank Deposit:</span>
+              <span className="text-base font-extrabold text-purple-900">
                 {formatPrice(netBankDeposit)}
               </span>
             </div>
@@ -1312,7 +1312,7 @@ function CloseDayConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={isSubmitting}
-            className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-900 px-5 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-slate-300"
+            className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-purple-600 to-[#5B21B6] px-5 text-sm font-semibold text-white hover:from-purple-500 hover:to-purple-800 disabled:from-slate-300 disabled:to-slate-300"
           >
             {isSubmitting ? (
               <>
@@ -1379,7 +1379,7 @@ function DayEndSuccessModal({
         <button
           type="button"
           onClick={onContinue}
-          className="mt-6 inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-900 px-5 text-sm font-semibold text-white transition hover:bg-blue-700"
+          className="mt-6 inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-purple-600 to-[#5B21B6] px-5 text-sm font-semibold text-white transition hover:from-purple-500 hover:to-purple-800"
         >
           Continue to Login
         </button>
@@ -1388,4 +1388,3 @@ function DayEndSuccessModal({
     document.body,
   );
 }
-

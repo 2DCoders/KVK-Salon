@@ -4,11 +4,11 @@ import SettingsPage from "./pages/settings"
 import AdminLayout from "./layouts/admin-layout"
 import Dayend from "./pages/dayend"
 import Packages from "./pages/packages"
-import Payments from "./pages/payments"
 import StaffPage from "./pages/staff"
 import SeatPage from "./pages/seat"
 import ServicesPage from "./pages/services"
 import BookingsPage from "./pages/bookings"
+import TodayPage from "./pages/today"
 
 function App() {
   return (
@@ -21,7 +21,7 @@ function App() {
       <Route element={<AdminLayout><ServicesPage /></AdminLayout>} path="/services" />
       <Route element={<AdminLayout><BookingsPage /></AdminLayout>} path="/bookings" />
       <Route element={<AdminLayout><Packages /></AdminLayout>} path="/packages" />
-      <Route element={<AdminLayout><Payments /></AdminLayout>} path="/payments" />
+      <Route element={<AdminLayout><TodayPage /></AdminLayout>} path="/today" />
       <Route element={<AdminLayout><Dayend /></AdminLayout>} path="/dayend" />
       <Route element={<AdminLayout><SettingsPage /></AdminLayout>} path="/settings" />
       

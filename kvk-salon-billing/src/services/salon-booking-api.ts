@@ -3,6 +3,7 @@ import { getEnv } from "@/env";
 
 const { API_URL } = getEnv();
 const BOOKINGS_API_URL = `${API_URL}saloon/bookings`;
+const BOOKINGS_LIST_API_URL = `${API_URL}saloon/saloons/bookings`;
 
 const getToken = () => {
     const cashier = localStorage.getItem("cashier")
@@ -29,6 +30,34 @@ export const checkDayAvailability = async (
                 },
             },
         );
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const getSaloonBookingsList = async (params: {
+    fromDate?: string;
+    toDate?: string;
+    status?: number;
+    searchTerm?: string;
+    pageSize?: number;
+}) => {
+    try {
+        const query = new URLSearchParams(
+            Object.entries(params).reduce((acc, [key, value]) => {
+                if (value !== undefined && value !== null && value !== "") {
+                    acc[key] = String(value);
+                }
+                return acc;
+            }, {} as Record<string, string>),
+        ).toString();
+
+        const response = await axios.get(`${BOOKINGS_LIST_API_URL}?${query}`, {
+            headers: {
+                Authorization: `Bearer ${getToken()}`,
+            },
+        });
         return response.data;
     } catch (error) {
         throw error;

@@ -181,6 +181,15 @@ const formatPrice = (price: number) =>
     minimumFractionDigits: 0,
   }).format(price);
 
+// Accepts local Sri Lankan mobile/landline numbers: 0 followed by 9 digits,
+// e.g. 0771234567 (10 digits total).
+const SRI_LANKA_PHONE_REGEX = /^0[1-9][0-9]{8}$/;
+
+const isValidSriLankanPhone = (value: string) => {
+  const normalized = value.replace(/[\s-]/g, "");
+  return SRI_LANKA_PHONE_REGEX.test(normalized);
+};
+
 const extractResponseData = (payload: unknown): any => {
   const record =
     typeof payload === "object" && payload !== null
@@ -417,6 +426,9 @@ export default function SalonBookingPage() {
 
     if (!phoneNumber.trim()) {
       errors.phoneNumber = "Phone number is required.";
+    } else if (!isValidSriLankanPhone(phoneNumber)) {
+      errors.phoneNumber =
+        "Enter a valid Sri Lankan phone number (e.g. 0771234567).";
     }
 
     setFormErrors(errors);
@@ -428,7 +440,7 @@ export default function SalonBookingPage() {
     selectedServiceIds.length > 0 &&
     Boolean(selectedTime) &&
     Boolean(customerName.trim()) &&
-    Boolean(phoneNumber.trim());
+    isValidSriLankanPhone(phoneNumber);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -796,7 +808,9 @@ export default function SalonBookingPage() {
                 label="Phone Number"
                 icon={<Phone size={16} />}
                 value={phoneNumber}
-                placeholder="Enter phone number"
+                placeholder="e.g. 0771234567"
+                type="tel"
+                maxLength={10}
                 required
                 error={formErrors.phoneNumber}
                 onChange={(value) => {
@@ -955,6 +969,8 @@ function FormField({
   placeholder,
   required,
   error,
+  type = "text",
+  maxLength,
   onChange,
 }: {
   label: string;
@@ -963,6 +979,8 @@ function FormField({
   placeholder: string;
   required?: boolean;
   error?: string;
+  type?: "text" | "tel";
+  maxLength?: number;
   onChange: (value: string) => void;
 }) {
   return (
@@ -978,9 +996,10 @@ function FormField({
         </div>
 
         <input
-          type="text"
+          type={type}
           value={value}
           placeholder={placeholder}
+          maxLength={maxLength}
           onChange={(event) => onChange(event.target.value)}
           className={`h-11 w-full rounded-xl border bg-white pl-10 pr-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 ${
             error
