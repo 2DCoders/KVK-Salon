@@ -8,6 +8,7 @@ import Payments from "./pages/payments"
 import StaffPage from "./pages/staff"
 import SeatPage from "./pages/seat"
 import ServicesPage from "./pages/services"
+import BookingsPage from "./pages/bookings"
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
       <Route element={<AdminLayout><StaffPage /></AdminLayout>} path="/staff" />
       <Route element={<AdminLayout><SeatPage /></AdminLayout>} path="/seat" />
       <Route element={<AdminLayout><ServicesPage /></AdminLayout>} path="/services" />
+      <Route element={<AdminLayout><BookingsPage /></AdminLayout>} path="/bookings" />
       <Route element={<AdminLayout><Packages /></AdminLayout>} path="/packages" />
       <Route element={<AdminLayout><Payments /></AdminLayout>} path="/payments" />
       <Route element={<AdminLayout><Dayend /></AdminLayout>} path="/dayend" />

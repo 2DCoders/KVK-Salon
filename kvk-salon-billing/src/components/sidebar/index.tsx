@@ -8,6 +8,7 @@ import {
   Armchair,
   Scissors,
   Sparkles,
+  CalendarClock,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -94,6 +95,13 @@ export default function Sidebar({
       label: "Services",
       icon: Sparkles,
       path: "/services",
+      submenu: null,
+    },
+    {
+      id: "bookings",
+      label: "Bookings",
+      icon: CalendarClock,
+      path: "/bookings",
       submenu: null,
     },
     {
