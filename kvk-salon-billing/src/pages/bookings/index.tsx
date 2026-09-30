@@ -253,8 +253,12 @@ export default function SalonBookingPage() {
   const loadWorkingDays = async () => {
     try {
       setIsLoadingDays(true);
-      const today = new Date().toISOString().slice(0, 10);
-      const response = await getNextWorkingDays(today, 7);
+      // getNextWorkingDays treats the given date as exclusive, so pass
+      // yesterday to include today as the first selectable working day.
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const startDate = yesterday.toISOString().slice(0, 10);
+      const response = await getNextWorkingDays(startDate, 7);
       const rows = Array.isArray(response) ? response : [];
       const days = buildWorkingDays(rows);
 
