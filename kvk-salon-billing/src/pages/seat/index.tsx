@@ -15,6 +15,7 @@ import {
     X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import Alert from "@/components/ui/alert";
 import {
     createSalonSeat,
@@ -71,6 +72,18 @@ const mapSeat = (seat: JsonRecord): SeatRecord => ({
 });
 
 export default function SeatPage() {
+    const navigate = useNavigate();
+
+    const dayendData = localStorage.getItem("dayEndData")
+        ? JSON.parse(localStorage.getItem("dayEndData") as string)
+        : null;
+
+    useEffect(() => {
+        if (!dayendData) {
+            navigate("/dayend");
+        }
+    }, [dayendData]);
+
     const [seats, setSeats] = useState<SeatRecord[]>([]);
     const [form, setForm] = useState<SeatForm>(initialForm);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -269,7 +282,7 @@ export default function SeatPage() {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row">
-                        <button type="button" onClick={loadSeats} disabled={isLoading} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-50">
+                        <button type="button" onClick={() => window.location.reload()} disabled={isLoading} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-50">
                             <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} /> Refresh
                         </button>
                         <button type="button" onClick={openAddForm} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] px-4 text-sm font-semibold text-white shadow-lg shadow-purple-300/30 transition hover:from-[#8B5CF6] hover:to-[#6D28D9]">

@@ -23,6 +23,7 @@ import {
     updateStaff,
 } from "@/services/salon-staff-api";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 
 interface StaffForm {
     name: string;
@@ -70,6 +71,18 @@ const mapStaff = (staff: any): StaffRecord => ({
 });
 
 export default function StaffPage() {
+    const navigate = useNavigate();
+
+    const dayendData = localStorage.getItem("dayEndData")
+        ? JSON.parse(localStorage.getItem("dayEndData") as string)
+        : null;
+
+    useEffect(() => {
+        if (!dayendData) {
+            navigate("/dayend");
+        }
+    }, [dayendData]);
+
     /* =========================================================
        Staff
        ========================================================= */
@@ -421,7 +434,7 @@ export default function StaffPage() {
                     <div className="flex flex-col gap-2 sm:flex-row">
                         <button
                             type="button"
-                            onClick={loadStaff}
+                            onClick={() => window.location.reload()}
                             disabled={isLoading}
                             className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
