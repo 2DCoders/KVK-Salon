@@ -748,7 +748,7 @@ export default function SalonServicesPage() {
                         </div>
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td className="whitespace-nowrap px-5 py-4">
                         <span className="inline-flex items-center gap-1.5 text-sm text-slate-600">
                           <Clock size={14} className="text-purple-400" />
                           {formatDuration(service.durationMinutes)}
@@ -1411,7 +1411,6 @@ function ViewServiceModal({
                 <h3 className="text-2xl font-bold text-slate-900">
                   {service.name}
                 </h3>
-                <StatusBadge isActive={service.isActive} />
               </div>
 
               <p className="mt-2 text-sm leading-7 text-slate-600">
@@ -1424,7 +1423,7 @@ function ViewServiceModal({
             </span>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-3">
             <div className="flex items-center gap-3 rounded-2xl border border-purple-100 bg-purple-50/60 p-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
                 <Timer size={18} />
@@ -1435,20 +1434,6 @@ function ViewServiceModal({
                 </p>
                 <p className="text-sm font-bold text-slate-900">
                   {formatDuration(service.durationMinutes)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-2xl border border-purple-100 bg-purple-50/60 p-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
-                <Clock size={18} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-purple-700">
-                  Buffer Time
-                </p>
-                <p className="text-sm font-bold text-slate-900">
-                  {formatDuration(service.bufferMinutes)}
                 </p>
               </div>
             </div>
