@@ -268,11 +268,11 @@ export default function StaffPage() {
 
         const normalizedPhone = form.phone.replace(/\D/g, "");
 
-        if (normalizedPhone.length !== 10) {
+        if (!/^07\d{8}$/.test(normalizedPhone)) {
             showAlert({
                 variant: "warning",
                 title: "Invalid phone number",
-                description: "Please enter a mobile number with exactly 10 digits.",
+                description: "Please enter a valid 10-digit mobile number starting with 07.",
             });
             return;
         }
@@ -557,7 +557,6 @@ export default function StaffPage() {
                                     <TableHeading>Staff Member</TableHeading>
                                     <TableHeading>Phone</TableHeading>
                                     <TableHeading>Designation</TableHeading>
-                                    <TableHeading>Status</TableHeading>
 
                                     <th className="w-28 px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
                                         Actions
@@ -618,14 +617,6 @@ export default function StaffPage() {
                                                         {member.designation || "-"}
                                                     </span>
                                                 </div>
-                                            </td>
-
-                                            {/* Status */}
-
-                                            <td className="px-5 py-4">
-                                                <StatusBadge
-                                                    isActive={member.isActive}
-                                                />
                                             </td>
 
                                             {/* Actions */}
@@ -940,7 +931,7 @@ export default function StaffPage() {
                                     id="staff-phone"
                                     label="Phone Number"
                                     value={form.phone}
-                                    placeholder="Enter phone number"
+                                    placeholder="07XXXXXXXX"
                                     type="tel"
                                     maxLength={10}
                                     inputMode="numeric"
