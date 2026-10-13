@@ -69,9 +69,9 @@ export const getSaloonBookingsList = async (params: {
     }
 };
 
-export const createSalonBooking = async (payload: any, isWalkIn = false, allowConflict = false) => {
+export const createSalonBooking = async (payload: any, isWalkIn = false) => {
     try {
-        const url = isWalkIn ? `${BOOKINGS_API_URL}/walk-in?allowConflict=${allowConflict}` : BOOKINGS_API_URL;
+        const url = isWalkIn ? `${BOOKINGS_API_URL}/walk-in` : BOOKINGS_API_URL;
         const response = await axios.post(url, payload, {
             headers: {
                 Authorization: `Bearer ${getToken()}`,

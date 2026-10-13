@@ -252,7 +252,6 @@ export default function SalonBookingPage() {
   const [isWalkIn, setIsWalkIn] = useState(false);
   const [businessHours, setBusinessHours] = useState<{ openTime: string; closeTime: string } | null>(null);
   const [hoursError, setHoursError] = useState(false);
-  const [allowConflict, setAllowConflict] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -264,7 +263,6 @@ export default function SalonBookingPage() {
 
   const changeBookingMode = (walkIn: boolean) => {
     setIsWalkIn(walkIn);
-    setAllowConflict(false);
     if (walkIn) {
       const now = getSriLankaNow();
       setSelectedDate(now.date);
@@ -395,7 +393,6 @@ export default function SalonBookingPage() {
   const canPickTime = Boolean(selectedDate) && selectedServiceIds.length > 0;
 
   const toggleService = (serviceId: string) => {
-    setAllowConflict(false);
     setSelectedServiceIds((previous) =>
       previous.includes(serviceId)
         ? previous.filter((id) => id !== serviceId)
@@ -434,11 +431,14 @@ export default function SalonBookingPage() {
     }
 
     let isCancelled = false;
+    let isRefreshing = false;
+    setSelectedTime("");
 
-    const loadAvailability = async () => {
+    const loadAvailability = async (initial = false) => {
+      if (isRefreshing || isCancelled) return;
+      isRefreshing = true;
       try {
-        setIsCheckingAvailability(true);
-        setSelectedTime("");
+        if (initial) setIsCheckingAvailability(true);
 
         const { slots, message } = await fetchAvailability(
           selectedDate,
@@ -448,6 +448,7 @@ export default function SalonBookingPage() {
         if (isCancelled) return;
 
         setAvailableSlots(slots);
+        setSelectedTime((previous) => slots.includes(previous) ? previous : "");
         setAvailabilityMessage(message);
       } catch (error) {
         console.error("Unable to check availability:", error);
@@ -455,18 +456,29 @@ export default function SalonBookingPage() {
         if (isCancelled) return;
 
         setAvailableSlots([]);
+        setSelectedTime("");
         setAvailabilityMessage(
           "Unable to check availability right now. Please try again.",
         );
       } finally {
+        isRefreshing = false;
         if (!isCancelled) setIsCheckingAvailability(false);
       }
     };
 
-    void loadAvailability();
+    void loadAvailability(true);
+    const refresh = () => {
+      if (document.visibilityState === "visible") void loadAvailability();
+    };
+    const timer = window.setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
 
     return () => {
       isCancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
     };
   }, [selectedDate, selectedServiceIds, isWalkIn]);
 
@@ -563,12 +575,11 @@ export default function SalonBookingPage() {
         })),
       };
 
-      await createSalonBooking(payload, isWalkIn, allowConflict);
+      await createSalonBooking(payload, isWalkIn);
 
       setShowSuccessModal(true);
       setSelectedServiceIds([]);
       setSelectedTime("");
-      setAllowConflict(false);
       setCustomerName("");
       setPhoneNumber("");
       setNotes("");
@@ -830,9 +841,9 @@ export default function SalonBookingPage() {
                   <label htmlFor="walk-in-start" className="block text-sm font-semibold text-slate-700">Actual start time</label>
                   <div className="flex gap-2">
                     <input id="walk-in-start" type="time" required value={selectedTime.slice(0, 5)}
-                      onChange={(event) => { setSelectedTime(event.target.value ? `${event.target.value}:00` : ""); setAllowConflict(false); }}
+                      onChange={(event) => { setSelectedTime(event.target.value ? `${event.target.value}:00` : ""); }}
                       className="rounded-xl border border-slate-200 px-3 py-2" />
-                    <button type="button" onClick={() => { setSelectedTime(getSriLankaNow().time); setAllowConflict(false); }} className="rounded-xl bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700">Now</button>
+                    <button type="button" onClick={() => { setSelectedTime(getSriLankaNow().time); }} className="rounded-xl bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700">Now</button>
                   </div>
                   {selectedTime && (
                     <p className="text-sm text-slate-600">Finishes at {formatTimeLabel(minutesToTimeString(timeStringToMinutes(selectedTime) + totalDurationMinutes))}.</p>
@@ -844,12 +855,7 @@ export default function SalonBookingPage() {
                     <p className="text-sm text-red-700">Choose an earlier start time so this appointment finishes today.</p>
                   )}
                   {hoursError && <p className="text-sm text-red-700">Unable to load salon hours. Refresh before adding a walk-in.</p>}
-                  <label className="flex items-start gap-2 text-sm text-slate-600">
-                    <input type="checkbox" checked={allowConflict} onChange={(event) => {
-                      if (!event.target.checked || window.confirm("If all seats are occupied at this time, this walk-in will overlap another appointment. Have you arranged capacity and want to override the conflict?")) setAllowConflict(event.target.checked);
-                    }} />
-                    Allow a schedule conflict if all seats are occupied (requires confirmation).
-                  </label>
+                  <p className="text-sm text-slate-500">A free seat is required for the full service duration. Existing appointments are protected.</p>
                 </div>
               ) : isCheckingAvailability ? (
                 <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
