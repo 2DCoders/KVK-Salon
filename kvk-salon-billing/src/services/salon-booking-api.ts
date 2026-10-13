@@ -5,6 +5,11 @@ const { API_URL } = getEnv();
 const BOOKINGS_API_URL = `${API_URL}saloon/bookings`;
 const BOOKINGS_LIST_API_URL = `${API_URL}saloon/saloons/bookings`;
 
+export const getSalonBusinessHours = async () => {
+    const response = await axios.get(`${API_URL}saloon/business-hours`);
+    return response.data;
+};
+
 const getToken = () => {
     const cashier = localStorage.getItem("cashier")
         ? JSON.parse(localStorage.getItem("cashier") as string)
@@ -64,9 +69,10 @@ export const getSaloonBookingsList = async (params: {
     }
 };
 
-export const createSalonBooking = async (payload: any) => {
+export const createSalonBooking = async (payload: any, isWalkIn = false, allowConflict = false) => {
     try {
-        const response = await axios.post(`${BOOKINGS_API_URL}`, payload, {
+        const url = isWalkIn ? `${BOOKINGS_API_URL}/walk-in?allowConflict=${allowConflict}` : BOOKINGS_API_URL;
+        const response = await axios.post(url, payload, {
             headers: {
                 Authorization: `Bearer ${getToken()}`,
             },

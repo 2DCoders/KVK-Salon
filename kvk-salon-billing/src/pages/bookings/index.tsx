@@ -24,6 +24,7 @@ import { getServiceItems } from "@/services/salon-services-api";
 import {
   checkDayAvailability,
   createSalonBooking,
+  getSalonBusinessHours,
 } from "@/services/salon-booking-api";
 
 /* =========================================================
@@ -62,6 +63,15 @@ type AlertState = {
 
 const DEFAULT_IMAGE_MIME_TYPE = "image/jpeg";
 const TIME_SLOT_STEP_MINUTES = 30;
+
+const getSriLankaNow = () => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Colombo", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return { date: `${part("year")}-${part("month")}-${part("day")}`, time: `${part("hour")}:${part("minute")}:00` };
+};
 
 const getBase64ImageSource = (image?: string | null) => {
   if (!image) return "";
@@ -133,7 +143,7 @@ const formatTimeLabel = (value: string): string => {
   return parsed.toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
+    hour12: false,
   });
 };
 
@@ -239,6 +249,31 @@ export default function SalonBookingPage() {
   const [availabilityMessage, setAvailabilityMessage] = useState("");
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [selectedTime, setSelectedTime] = useState("");
+  const [isWalkIn, setIsWalkIn] = useState(false);
+  const [businessHours, setBusinessHours] = useState<{ openTime: string; closeTime: string } | null>(null);
+  const [hoursError, setHoursError] = useState(false);
+  const [allowConflict, setAllowConflict] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSalonBusinessHours().then((hours) => {
+      if (!cancelled) setBusinessHours(hours);
+    }).catch(() => { if (!cancelled) setHoursError(true); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const changeBookingMode = (walkIn: boolean) => {
+    setIsWalkIn(walkIn);
+    setAllowConflict(false);
+    if (walkIn) {
+      const now = getSriLankaNow();
+      setSelectedDate(now.date);
+      setSelectedTime(now.time);
+    } else {
+      setSelectedDate(workingDays[0]?.iso ?? "");
+      setSelectedTime("");
+    }
+  };
 
   const [customerName, setCustomerName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -360,12 +395,13 @@ export default function SalonBookingPage() {
   const canPickTime = Boolean(selectedDate) && selectedServiceIds.length > 0;
 
   const toggleService = (serviceId: string) => {
+    setAllowConflict(false);
     setSelectedServiceIds((previous) =>
       previous.includes(serviceId)
         ? previous.filter((id) => id !== serviceId)
         : [...previous, serviceId],
     );
-    setSelectedTime("");
+    if (!isWalkIn) setSelectedTime("");
   };
 
   /* =========================================================
@@ -386,6 +422,10 @@ export default function SalonBookingPage() {
   };
 
   useEffect(() => {
+    if (isWalkIn) {
+      setIsCheckingAvailability(false);
+      return;
+    }
     if (!selectedDate || selectedServiceIds.length === 0) {
       setAvailableSlots([]);
       setAvailabilityMessage("");
@@ -428,7 +468,7 @@ export default function SalonBookingPage() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedDate, selectedServiceIds]);
+  }, [selectedDate, selectedServiceIds, isWalkIn]);
 
   /* =========================================================
      Submission
@@ -456,6 +496,8 @@ export default function SalonBookingPage() {
     Boolean(selectedDate) &&
     selectedServiceIds.length > 0 &&
     Boolean(selectedTime) &&
+    (!isWalkIn || Boolean(businessHours)) &&
+    timeStringToMinutes(selectedTime) + totalDurationMinutes <= 1440 &&
     Boolean(customerName.trim()) &&
     isValidSriLankanPhone(phoneNumber);
 
@@ -464,29 +506,43 @@ export default function SalonBookingPage() {
 
     if (!validateForm() || !canSubmit) return;
 
+    if (isWalkIn && businessHours) {
+      const endMinutes = timeStringToMinutes(selectedTime) + totalDurationMinutes;
+      const closeMinutes = timeStringToMinutes(businessHours.closeTime);
+      if (endMinutes > closeMinutes && !window.confirm(
+        `This service finishes at ${formatTimeLabel(minutesToTimeString(endMinutes))}, ${endMinutes - closeMinutes} minutes after closing (${formatTimeLabel(businessHours.closeTime)}). Add walk-in anyway?`,
+      )) return;
+      if (timeStringToMinutes(selectedTime) < timeStringToMinutes(businessHours.openTime) && !window.confirm(
+        `This walk-in starts before the salon opens at ${formatTimeLabel(businessHours.openTime)}. Add walk-in anyway?`,
+      )) return;
+    }
+
     try {
       setIsSubmitting(true);
 
       // Re-check availability right before booking — the previously fetched
       // slot may have just been taken by another cashier in the meantime.
-      const { slots: freshSlots, message: freshMessage } =
-        await fetchAvailability(selectedDate, selectedServiceIds);
+      if (!isWalkIn) {
+        const { slots: freshSlots, message: freshMessage } =
+          await fetchAvailability(selectedDate, selectedServiceIds);
 
-      setAvailableSlots(freshSlots);
-      setAvailabilityMessage(freshMessage);
+        setAvailableSlots(freshSlots);
+        setAvailabilityMessage(freshMessage);
 
-      if (!freshSlots.includes(selectedTime)) {
-        setSelectedTime("");
+        if (!freshSlots.includes(selectedTime)) {
+          setSelectedTime("");
 
-        setPageAlert({
-          visible: true,
-          variant: "warning",
-          title: "Time no longer available",
-          description:
-            "That time was just booked by someone else. Please choose another available time.",
-        });
+          setPageAlert({
+            visible: true,
+            variant: "warning",
+            title: "Time no longer available",
+            description:
+              "That time was just booked by someone else. Please choose another available time.",
+          });
 
-        return;
+          return;
+        }
+
       }
 
       const payload = {
@@ -507,11 +563,12 @@ export default function SalonBookingPage() {
         })),
       };
 
-      await createSalonBooking(payload);
+      await createSalonBooking(payload, isWalkIn, allowConflict);
 
       setShowSuccessModal(true);
       setSelectedServiceIds([]);
       setSelectedTime("");
+      setAllowConflict(false);
       setCustomerName("");
       setPhoneNumber("");
       setNotes("");
@@ -572,7 +629,7 @@ export default function SalonBookingPage() {
 
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                New Booking
+                {isWalkIn ? "Add Walk-in" : "New Booking"}
               </h1>
               <p className="text-sm text-slate-500">
                 Pick a day, choose services, and confirm a time for your
@@ -593,7 +650,22 @@ export default function SalonBookingPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex flex-wrap gap-2" aria-label="Booking type">
+            {[false, true].map((walkIn) => (
+              <button key={String(walkIn)} type="button" aria-pressed={isWalkIn === walkIn}
+                onClick={() => changeBookingMode(walkIn)}
+                className={`rounded-xl border px-4 py-2 text-sm font-semibold ${isWalkIn === walkIn ? "border-purple-500 bg-purple-500 text-white" : "border-slate-200 bg-white text-slate-700"}`}>
+                {walkIn ? "Add walk-in" : "Scheduled booking"}
+              </button>
+            ))}
+          </div>
           {/* Step 1: Date */}
+          {isWalkIn ? (
+            <section className="rounded-2xl border border-purple-100 bg-white p-5">
+              <SectionHeading step={1} title="Walk-in today" description="Record the customer's actual arrival time, including an earlier time today." />
+              <p className="mt-3 text-sm text-slate-600">{selectedDate}</p>
+            </section>
+          ) : (
           <section className="rounded-2xl border border-purple-100 bg-white p-5 shadow-[0_12px_35px_rgba(91,33,182,0.07)] sm:p-6">
             <SectionHeading
               step={1}
@@ -656,6 +728,7 @@ export default function SalonBookingPage() {
             )}
           </section>
 
+          )}
           {/* Step 2: Services */}
           <section className="rounded-2xl border border-purple-100 bg-white p-5 shadow-[0_12px_35px_rgba(91,33,182,0.07)] sm:p-6">
             <SectionHeading
@@ -749,7 +822,36 @@ export default function SalonBookingPage() {
                 description="Available times are calculated across every seat."
               />
 
-              {isCheckingAvailability ? (
+              {businessHours && (
+                <p className="mt-3 text-sm text-purple-700">Salon opens at {formatTimeLabel(businessHours.openTime)} and closes at {formatTimeLabel(businessHours.closeTime)}.</p>
+              )}
+              {isWalkIn ? (
+                <div className="mt-4 space-y-3">
+                  <label htmlFor="walk-in-start" className="block text-sm font-semibold text-slate-700">Actual start time</label>
+                  <div className="flex gap-2">
+                    <input id="walk-in-start" type="time" required value={selectedTime.slice(0, 5)}
+                      onChange={(event) => { setSelectedTime(event.target.value ? `${event.target.value}:00` : ""); setAllowConflict(false); }}
+                      className="rounded-xl border border-slate-200 px-3 py-2" />
+                    <button type="button" onClick={() => { setSelectedTime(getSriLankaNow().time); setAllowConflict(false); }} className="rounded-xl bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700">Now</button>
+                  </div>
+                  {selectedTime && (
+                    <p className="text-sm text-slate-600">Finishes at {formatTimeLabel(minutesToTimeString(timeStringToMinutes(selectedTime) + totalDurationMinutes))}.</p>
+                  )}
+                  {businessHours && selectedTime && timeStringToMinutes(selectedTime) + totalDurationMinutes > timeStringToMinutes(businessHours.closeTime) && (
+                    <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">This service finishes after closing. You will be asked to confirm before saving.</p>
+                  )}
+                  {selectedTime && timeStringToMinutes(selectedTime) + totalDurationMinutes > 1440 && (
+                    <p className="text-sm text-red-700">Choose an earlier start time so this appointment finishes today.</p>
+                  )}
+                  {hoursError && <p className="text-sm text-red-700">Unable to load salon hours. Refresh before adding a walk-in.</p>}
+                  <label className="flex items-start gap-2 text-sm text-slate-600">
+                    <input type="checkbox" checked={allowConflict} onChange={(event) => {
+                      if (!event.target.checked || window.confirm("If all seats are occupied at this time, this walk-in will overlap another appointment. Have you arranged capacity and want to override the conflict?")) setAllowConflict(event.target.checked);
+                    }} />
+                    Allow a schedule conflict if all seats are occupied (requires confirmation).
+                  </label>
+                </div>
+              ) : isCheckingAvailability ? (
                 <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
                   <Loader2 size={16} className="animate-spin text-purple-500" />
                   Checking availability...
@@ -925,7 +1027,7 @@ export default function SalonBookingPage() {
                 ) : (
                   <>
                     <CheckCircle2 size={18} />
-                    Confirm Booking
+                    {isWalkIn ? "Add Walk-in" : "Confirm Booking"}
                   </>
                 )}
               </button>
