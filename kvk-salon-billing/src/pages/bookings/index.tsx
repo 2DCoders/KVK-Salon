@@ -25,6 +25,7 @@ import {
   checkDayAvailability,
   createSalonBooking,
   getSalonBusinessHours,
+  checkSalonTimeAvailability,
 } from "@/services/salon-booking-api";
 
 /* =========================================================
@@ -250,6 +251,41 @@ export default function SalonBookingPage() {
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [selectedTime, setSelectedTime] = useState("");
   const [isWalkIn, setIsWalkIn] = useState(false);
+  const [walkInCapacity, setWalkInCapacity] = useState<{ isAvailable: boolean; availableSeatCount: number; totalSeatCount: number; message: string } | null>(null);
+  const [isCheckingWalkInCapacity, setIsCheckingWalkInCapacity] = useState(false);
+
+  useEffect(() => {
+    setWalkInCapacity(null);
+    if (!isWalkIn || !selectedDate || !selectedTime || selectedServiceIds.length === 0) {
+      setIsCheckingWalkInCapacity(false);
+      return;
+    }
+    let cancelled = false;
+    let pending = false;
+    const refresh = async () => {
+      if (pending || cancelled) return;
+      pending = true;
+      setIsCheckingWalkInCapacity(true);
+      try {
+        const result = extractResponseData(await checkSalonTimeAvailability(selectedDate, selectedTime, selectedServiceIds));
+        if (!cancelled) setWalkInCapacity(result);
+      } catch {
+        if (!cancelled) setWalkInCapacity({ isAvailable: false, availableSeatCount: 0, totalSeatCount: 0, message: "Unable to check seats. Refresh and try again." });
+      } finally {
+        pending = false;
+        if (!cancelled) setIsCheckingWalkInCapacity(false);
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 15000);
+    const onFocus = () => void refresh();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [isWalkIn, selectedDate, selectedTime, selectedServiceIds]);
   const [businessHours, setBusinessHours] = useState<{ openTime: string; closeTime: string } | null>(null);
   const [hoursError, setHoursError] = useState(false);
 
@@ -509,6 +545,7 @@ export default function SalonBookingPage() {
     selectedServiceIds.length > 0 &&
     Boolean(selectedTime) &&
     (!isWalkIn || Boolean(businessHours)) &&
+    (!isWalkIn || (walkInCapacity?.isAvailable === true && !isCheckingWalkInCapacity)) &&
     timeStringToMinutes(selectedTime) + totalDurationMinutes <= 1440 &&
     Boolean(customerName.trim()) &&
     isValidSriLankanPhone(phoneNumber);
@@ -531,6 +568,15 @@ export default function SalonBookingPage() {
 
     try {
       setIsSubmitting(true);
+
+      if (isWalkIn) {
+        const capacity = extractResponseData(await checkSalonTimeAvailability(selectedDate, selectedTime, selectedServiceIds));
+        setWalkInCapacity(capacity);
+        if (!capacity?.isAvailable) {
+          setPageAlert({ visible: true, variant: "warning", title: "No seat available", description: capacity?.message || "All seats are occupied. Complete an existing service before adding another walk-in." });
+          return;
+        }
+      }
 
       // Re-check availability right before booking — the previously fetched
       // slot may have just been taken by another cashier in the meantime.
@@ -855,6 +901,15 @@ export default function SalonBookingPage() {
                     <p className="text-sm text-red-700">Choose an earlier start time so this appointment finishes today.</p>
                   )}
                   {hoursError && <p className="text-sm text-red-700">Unable to load salon hours. Refresh before adding a walk-in.</p>}
+                  {isCheckingWalkInCapacity ? (
+                    <p className="text-sm text-slate-500">Checking available seats...</p>
+                  ) : walkInCapacity && (
+                    <p role="status" className={`rounded-xl p-3 text-sm ${walkInCapacity.isAvailable ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-700"}`}>
+                      {walkInCapacity.isAvailable
+                        ? `${walkInCapacity.availableSeatCount} of ${walkInCapacity.totalSeatCount} seats available for this service.`
+                        : walkInCapacity.message}
+                    </p>
+                  )}
                   <p className="text-sm text-slate-500">A free seat is required for the full service duration. Existing appointments are protected.</p>
                 </div>
               ) : isCheckingAvailability ? (

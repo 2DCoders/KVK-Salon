@@ -10,6 +10,13 @@ export const getSalonBusinessHours = async () => {
     return response.data;
 };
 
+export const checkSalonTimeAvailability = async (date: string, time: string, serviceIds: string[]) => {
+    const params = new URLSearchParams({ Date: date, Time: time });
+    serviceIds.forEach((id) => params.append("SaloonServiceIds", id));
+    const response = await axios.get(`${BOOKINGS_API_URL}/availability?${params.toString()}`);
+    return response.data;
+};
+
 const getToken = () => {
     const cashier = localStorage.getItem("cashier")
         ? JSON.parse(localStorage.getItem("cashier") as string)
