@@ -45,6 +45,7 @@ export const getSaloonBookingsList = async (params: {
     fromDate?: string;
     toDate?: string;
     status?: number;
+    includeUnpaid?: boolean;
     searchTerm?: string;
     pageSize?: number;
 }) => {
@@ -81,4 +82,18 @@ export const createSalonBooking = async (payload: any, isWalkIn = false) => {
     } catch (error) {
         throw error;
     }
+};
+
+export const setSalonServiceStatus = async (id: string, status: 3 | 4) => {
+    const response = await axios.patch(`${BOOKINGS_LIST_API_URL}/${id}/service-status`, { status }, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    return response.data;
+};
+
+export const collectSalonPayment = async (id: string, paymentType: 1 | 2) => {
+    const response = await axios.post(`${BOOKINGS_LIST_API_URL}/${id}/collect-payment`, { paymentType }, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    return response.data;
 };

@@ -18,7 +18,9 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { getSaloonBookingsList } from "@/services/salon-booking-api";
+import { collectSalonPayment, setSalonServiceStatus, getSaloonBookingsList } from "@/services/salon-booking-api";
+import { downloadSalonReceipt } from "@/services/salon-receipt";
+import { getFinancialSummary } from "@/services/financial-api";
 import { getSalonSeatList } from "@/services/salon-seat-api";
 
 /* =========================================================
@@ -29,6 +31,7 @@ type ServiceLine = {
   id: string;
   serviceName: string;
   price: number;
+  discountAmount: number;
   durationMinutes: number;
 };
 
@@ -45,7 +48,10 @@ type BookingRow = {
   totalAmount: number;
   discountAmount: number;
   notes: string;
-  paymentType: number;
+  paymentType: number | null;
+  isPaid: boolean;
+  isWalkIn: boolean;
+  paidAt: string | null;
   services: ServiceLine[];
 };
 
@@ -54,9 +60,8 @@ type SeatOption = {
   name: string;
 };
 
-type ScheduleStatus = "upcoming" | "ongoing" | "completed";
+type ScheduleStatus = "confirmed" | "upcoming" | "ongoing" | "completed";
 
-const CONFIRMED_STATUS = 2;
 
 const normalizeBooking = (raw: any): BookingRow => ({
   id: String(raw.id),
@@ -71,12 +76,16 @@ const normalizeBooking = (raw: any): BookingRow => ({
   totalAmount: Number(raw.totalAmount ?? 0),
   discountAmount: Number(raw.discountAmount ?? 0),
   notes: String(raw.notes ?? ""),
-  paymentType: Number(raw.paymentType ?? 1),
+  paymentType: raw.paymentType == null ? null : Number(raw.paymentType),
+  isPaid: Boolean(raw.isPaid),
+  isWalkIn: Boolean(raw.isWalkIn),
+  paidAt: raw.paidAt ?? null,
   services: Array.isArray(raw.services)
     ? raw.services.map((service: any) => ({
         id: String(service.id),
         serviceName: String(service.serviceName ?? "Service"),
         price: Number(service.price ?? 0),
+        discountAmount: Number(service.discountAmount ?? 0),
         durationMinutes: Number(service.durationMinutes ?? 0),
       }))
     : [],
@@ -100,11 +109,15 @@ export default function SalonTodayPage() {
   }, [dayendData]);
 
   const today = new Date();
-  const todayDate = today.toISOString().split("T")[0];
+  const todayDate = today.toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" });
 
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [collectingBooking, setCollectingBooking] = useState<BookingRow | null>(null);
+  const [todayRevenue, setTodayRevenue] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [now, setNow] = useState(new Date());
 
@@ -150,12 +163,12 @@ export default function SalonTodayPage() {
     return parsed.toLocaleTimeString("en-GB", {
       hour: "2-digit",
       minute: "2-digit",
-      hour12: true,
+      hour12: false,
     });
   };
 
-  const paymentLabel = (paymentType: number) =>
-    paymentType === 1 ? "Cash" : "Card";
+  const paymentLabel = (paymentType: number | null) =>
+    paymentType == null ? "Not collected" : paymentType === 1 ? "Cash" : "Card";
 
   /* =========================================================
      Seat Filter Options
@@ -182,6 +195,16 @@ export default function SalonTodayPage() {
      Bookings Data Loading
      ========================================================= */
 
+  const loadRevenue = async () => {
+    try {
+      const nextDate = new Date(`${todayDate}T00:00:00Z`);
+      nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+      const result = await getFinancialSummary(todayDate, nextDate.toISOString().slice(0, 10));
+      const summary = result?.additionalData?.response ?? result?.additionalData?.Response ?? result?.response ?? result;
+      setTodayRevenue(Number(summary?.totalRevenue ?? 0));
+    } catch { setTodayRevenue(null); }
+  };
+
   const loadTodaysBookings = async () => {
     try {
       setIsLoading(true);
@@ -190,17 +213,18 @@ export default function SalonTodayPage() {
       const response = await getSaloonBookingsList({
         fromDate: todayDate,
         toDate: todayDate,
-        status: CONFIRMED_STATUS,
+        includeUnpaid: true,
         pageSize: 500,
       });
 
       const rows: BookingRow[] = Array.isArray(response)
-        ? response.map(normalizeBooking)
+        ? response.map(normalizeBooking).filter((booking: BookingRow) => [2, 3, 4].includes(booking.status))
         : [];
 
       rows.sort((a, b) => a.startTime.localeCompare(b.startTime));
 
       setBookings(rows);
+      void loadRevenue();
     } catch (error) {
       console.error("Failed to load today's appointments:", error);
       setBookings([]);
@@ -216,7 +240,45 @@ export default function SalonTodayPage() {
     void loadTodaysBookings();
   }, []);
 
+  const applyBookingResponse = (payload: any) => {
+    const raw = payload?.additionalData?.Response ?? payload?.additionalData?.response ?? payload?.response;
+    if (!raw?.id) throw new Error("Unable to read the updated appointment. Refresh the list.");
+    const updated = normalizeBooking(raw);
+    setBookings((previous) => previous.map((booking) => booking.id === updated.id ? updated : booking));
+    setViewingBooking((previous) => previous?.id === updated.id ? updated : previous);
+    return updated;
+  };
+
+  const changeServiceStatus = async (booking: BookingRow, status: 3 | 4) => {
+    if (busyId) return;
+    setBusyId(booking.id);
+    setActionError("");
+    try {
+      applyBookingResponse(await setSalonServiceStatus(booking.id, status));
+    } catch (error: any) {
+      setActionError(error?.response?.data?.message ?? error?.message ?? "Unable to update service status.");
+    } finally { setBusyId(null); }
+  };
+
+  const handleCollectPayment = async (booking: BookingRow, method: 1 | 2) => {
+    if (busyId) return;
+    setBusyId(booking.id);
+    setActionError("");
+    try {
+      const updated = applyBookingResponse(await collectSalonPayment(booking.id, method));
+      setCollectingBooking(null);
+      void loadRevenue();
+      try { downloadSalonReceipt(updated); }
+      catch { setActionError("Payment saved. Use Receipt to download the receipt again."); }
+    } catch (error: any) {
+      setActionError(error?.response?.data?.message ?? error?.message ?? "Unable to collect payment. Refresh before trying again.");
+    } finally { setBusyId(null); }
+  };
+
   const getScheduleStatus = (booking: BookingRow): ScheduleStatus => {
+    if (booking.status === 4) return "completed";
+    if (booking.status === 3) return "ongoing";
+    if (booking.isWalkIn) return "confirmed";
     const start = new Date(`${booking.bookingDate}T${booking.startTime}`);
     const end = new Date(`${booking.bookingDate}T${booking.endTime}`);
 
@@ -242,7 +304,7 @@ export default function SalonTodayPage() {
 
   const nextUpcomingId = useMemo(() => {
     const upcoming = bookings.find(
-      (booking) => getScheduleStatus(booking) === "upcoming",
+      (booking) => ["upcoming", "confirmed"].includes(getScheduleStatus(booking)),
     );
     return upcoming?.id ?? null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -250,23 +312,17 @@ export default function SalonTodayPage() {
 
   const stats = useMemo(() => {
     const upcomingCount = bookings.filter(
-      (booking) => getScheduleStatus(booking) === "upcoming",
+      (booking) => ["upcoming", "confirmed"].includes(getScheduleStatus(booking)),
     ).length;
 
     const ongoingCount = bookings.filter(
       (booking) => getScheduleStatus(booking) === "ongoing",
     ).length;
 
-    const totalRevenue = bookings.reduce(
-      (sum, booking) => sum + booking.totalAmount,
-      0,
-    );
-
     return {
       totalGuests: bookings.length,
       upcomingCount,
       ongoingCount,
-      totalRevenue,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings, now]);
@@ -294,7 +350,7 @@ export default function SalonTodayPage() {
               </div>
 
               <p className="text-sm text-slate-500">
-                Confirmed appointments booked for today, sorted by time.
+                Today's appointments and earlier unpaid services, sorted by time.
               </p>
             </div>
           </div>
@@ -310,12 +366,14 @@ export default function SalonTodayPage() {
           </button>
         </div>
 
+        {actionError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
+
         {/* Summary Metric Cards */}
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
-            title="Total Guests Today"
+            title="Appointments"
             value={stats.totalGuests.toLocaleString()}
-            subtitle="Confirmed appointments"
+            subtitle="Today and earlier unpaid"
             icon={<Users size={20} />}
             iconClassName="bg-purple-50 text-purple-800"
           />
@@ -323,7 +381,7 @@ export default function SalonTodayPage() {
           <SummaryCard
             title="Upcoming"
             value={stats.upcomingCount.toLocaleString()}
-            subtitle="Yet to arrive"
+            subtitle="Awaiting service"
             icon={<Clock size={20} />}
             iconClassName="bg-blue-50 text-blue-600"
           />
@@ -337,9 +395,9 @@ export default function SalonTodayPage() {
           />
 
           <SummaryCard
-            title="Today's Revenue"
-            value={formatPrice(stats.totalRevenue)}
-            subtitle="From confirmed guests"
+            title="Payments Received Today"
+            value={todayRevenue == null ? "Unavailable" : formatPrice(todayRevenue)}
+            subtitle="All payments collected today"
             icon={<TrendingUp size={20} />}
             iconClassName="bg-violet-50 text-violet-600"
           />
@@ -351,8 +409,7 @@ export default function SalonTodayPage() {
             <div>
               <h2 className="font-bold text-slate-900">Guest Schedule</h2>
               <p className="text-xs text-slate-500">
-                Time, guest details, seat and payment for each confirmed
-                appointment today.
+                Track service progress, unpaid balances, and collected payments.
               </p>
             </div>
 
@@ -400,11 +457,11 @@ export default function SalonTodayPage() {
               </div>
               <p className="font-semibold text-slate-700">
                 {bookings.length === 0
-                  ? "No confirmed appointments booked for today yet."
+                  ? "No appointments or unpaid balances to show."
                   : "No guests match your search or filter."}
               </p>
               <p className="text-xs text-slate-400">
-                Confirmed appointments for today will appear here
+                Appointments and unpaid services will appear here
                 automatically.
               </p>
             </div>
@@ -439,6 +496,11 @@ export default function SalonTodayPage() {
                           {booking.customerName}
                         </p>
                         <StatusBadge status={status} />
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${booking.isPaid ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
+                          {booking.isPaid ? "Paid" : "Unpaid"}
+                        </span>
+                        {booking.isWalkIn && <span className="text-xs text-slate-500">Walk-in</span>}
+                        {booking.bookingDate !== todayDate && <span className="text-xs text-amber-700">{booking.bookingDate} ? Earlier unpaid</span>}
                         {isNext && (
                           <span className="inline-flex items-center rounded-full bg-purple-700 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                             Next Up
@@ -467,10 +529,21 @@ export default function SalonTodayPage() {
                         {formatPrice(booking.totalAmount)}
                       </p>
                       <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
-                        {paymentLabel(booking.paymentType)}
+                        {booking.isPaid ? paymentLabel(booking.paymentType) : "Payment due"}
                       </span>
                     </div>
 
+                    <div className="flex flex-wrap gap-2">
+                      {booking.status === 2 && (
+                        <button type="button" disabled={busyId !== null} onClick={() => void changeServiceStatus(booking, 3)} className="rounded-lg bg-purple-50 px-3 py-2 text-xs font-semibold text-purple-700 disabled:opacity-50">Start service</button>
+                      )}
+                      {booking.status === 3 && (
+                        <button type="button" disabled={busyId !== null} onClick={() => void changeServiceStatus(booking, 4)} className="rounded-lg bg-purple-50 px-3 py-2 text-xs font-semibold text-purple-700 disabled:opacity-50">Complete service</button>
+                      )}
+                      {booking.status === 4 && !booking.isPaid && (
+                        <button type="button" disabled={busyId !== null} onClick={() => { setActionError(""); setCollectingBooking(booking); }} className="rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Collect payment</button>
+                      )}
+                      {booking.isPaid && <button type="button" onClick={() => downloadSalonReceipt(booking)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">Receipt</button>}
                     <button
                       type="button"
                       onClick={() => setViewingBooking(booking)}
@@ -479,6 +552,7 @@ export default function SalonTodayPage() {
                       <Eye size={14} />
                       View
                     </button>
+                    </div>
                   </div>
                 );
               })}
@@ -486,6 +560,10 @@ export default function SalonTodayPage() {
           )}
         </section>
       </div>
+
+      {collectingBooking && <CollectPaymentModal booking={collectingBooking} busy={busyId !== null}
+        error={actionError} formatPrice={formatPrice} onClose={() => { if (!busyId) setCollectingBooking(null); }}
+        onCollect={(method) => void handleCollectPayment(collectingBooking, method)} />}
 
       {viewingBooking && (
         <BookingDetailModal
@@ -591,6 +669,40 @@ function SummaryCard({
    Status Badge
    ========================================================= */
 
+function CollectPaymentModal({ booking, busy, error, formatPrice, onClose, onCollect }: {
+  booking: BookingRow;
+  busy: boolean;
+  error: string;
+  formatPrice: (amount: number) => string;
+  onClose: () => void;
+  onCollect: (method: 1 | 2) => void;
+}) {
+  const [method, setMethod] = useState<1 | 2>(1);
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 p-4">
+      <div role="dialog" aria-modal="true" aria-labelledby="collect-payment-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 id="collect-payment-title" className="text-lg font-bold text-slate-900">Collect payment</h2>
+        <p className="mt-2 text-sm text-slate-600">{booking.customerName} · Service completed</p>
+        <p className="mt-4 text-2xl font-bold text-purple-800">{formatPrice(booking.totalAmount)}</p>
+        <p className="mt-2 text-sm text-slate-500">Confirm only after receiving the full payment. For card payments, use the salon's card terminal.</p>
+        <div className="mt-4 flex gap-3">
+          {([1, 2] as const).map((value) => (
+            <button type="button" key={value} aria-pressed={method === value} disabled={busy} onClick={() => setMethod(value)}
+              className={`flex-1 rounded-xl border px-4 py-3 font-semibold ${method === value ? "border-purple-600 bg-purple-50 text-purple-700" : "border-slate-200 text-slate-600"}`}>
+              {value === 1 ? "Cash" : "Card"}
+            </button>
+          ))}
+        </div>
+        {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+        <button type="button" disabled={busy} onClick={() => onCollect(method)} className="mt-5 w-full rounded-xl bg-purple-600 px-4 py-3 font-semibold text-white disabled:opacity-50">
+          {busy ? "Saving payment..." : "Confirm payment received"}
+        </button>
+        <button type="button" disabled={busy} onClick={onClose} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600">Cancel</button>
+      </div>
+    </div>, document.body,
+  );
+}
+
 function StatusBadge({ status }: { status: ScheduleStatus }) {
   if (status === "ongoing") {
     return (
@@ -611,7 +723,7 @@ function StatusBadge({ status }: { status: ScheduleStatus }) {
 
   return (
     <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
-      Upcoming
+      {status === "confirmed" ? "Confirmed" : "Upcoming"}
     </span>
   );
 }
@@ -632,7 +744,7 @@ function BookingDetailModal({
   status: ScheduleStatus;
   formatPrice: (price: number) => string;
   formatTime: (time: string) => string;
-  paymentLabel: (paymentType: number) => string;
+  paymentLabel: (paymentType: number | null) => string;
   onClose: () => void;
 }) {
   return createPortal(
@@ -670,6 +782,7 @@ function BookingDetailModal({
         <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
           <div className="flex items-center gap-2">
             <StatusBadge status={status} />
+            <span className="text-sm font-semibold">{booking.isPaid ? "Paid" : "Unpaid"}</span>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
@@ -684,7 +797,7 @@ function BookingDetailModal({
             />
             <DetailRow
               label="Payment Method"
-              value={paymentLabel(booking.paymentType)}
+              value={booking.isPaid ? paymentLabel(booking.paymentType) : "Unpaid ? collect after service"}
             />
             <div className="h-px bg-slate-200" />
             <div className="flex items-center justify-between text-sm">

@@ -567,7 +567,7 @@ export default function SalonBookingPage() {
         totalAmount: totalPrice,
         discountAmount: 0,
         notes: notes.trim() || null,
-        paymentType,
+        ...(isWalkIn ? {} : { paymentType }),
         services: selectedServices.map((service) => ({
           saloonServiceId: service.id,
           price: service.price,
@@ -947,6 +947,9 @@ export default function SalonBookingPage() {
               />
             </div>
 
+            {isWalkIn ? (
+              <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Unpaid — collect cash or card payment from Today's Appointments after completing the service.</p>
+            ) : (
             <div className="mt-4">
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                 Payment Method
@@ -980,6 +983,7 @@ export default function SalonBookingPage() {
                 </button>
               </div>
             </div>
+            )}
 
             <div className="mt-4">
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">
@@ -1044,7 +1048,7 @@ export default function SalonBookingPage() {
 
       {showSuccessModal &&
         createPortal(
-          <SuccessModal onClose={() => setShowSuccessModal(false)} />,
+          <SuccessModal isWalkIn={isWalkIn} onClose={() => setShowSuccessModal(false)} />,
           document.body,
         )}
     </main>
@@ -1142,7 +1146,7 @@ function FormField({
    Success Modal
    ========================================================= */
 
-function SuccessModal({ onClose }: { onClose: () => void }) {
+function SuccessModal({ onClose, isWalkIn }: { onClose: () => void; isWalkIn: boolean }) {
   return (
     <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-8">
@@ -1155,7 +1159,7 @@ function SuccessModal({ onClose }: { onClose: () => void }) {
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          The appointment has been booked successfully.
+          {isWalkIn ? "The seat is reserved. Payment is unpaid; complete the service and collect payment from Today's Appointments." : "The appointment has been booked successfully."}
         </p>
 
         <button
